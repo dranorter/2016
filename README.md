@@ -1,3 +1,7 @@
+# Recursive Nested Story
+
+This is the repository for my NaNoGenMo project. [Details here.](https://github.com/NaNoGenMo/2016/issues/128) Original project readme appears below.
+
 # NaNoGenMo 2016
 
 National Novel Generation Month - based on [an idea Darius tweeted on a whim](https://twitter.com/tinysubversions/status/396305662000775168), where people are challenged to write code that writes a novel.
