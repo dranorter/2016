@@ -3,14 +3,10 @@ var tracery = require("./tracery.js");
 var grammars = require("./grammar.js");
 var fs = require("fs");
 
-var numtries = 400;
+var numtries = 7000;
+var minlength = 140;
 
 function loadGrammar(name) {
-
-    // Idea here will be to try and generate stories and keep them in a list,
-    // sorted by number of STORYGOESHERE holes. A complete narrative can be made using
-    // a subset with numstories - numholes = 1. Within that constraint, we want to use
-    // the more complicated stories; longer text and more holes.
     var grammar = tracery.createGrammar(grammars[name]);
     grammar.addModifiers({
 	find : function(s) {
@@ -26,14 +22,28 @@ function loadGrammar(name) {
 	    return s;
 	}
     });
+
+    return grammar
+}
+
+function makeStories(name) {
+
+    // Idea here will be to try and generate stories and keep them in a list,
+    // sorted by number of STORYGOESHERE holes. A complete narrative can be made using
+    // a subset with numstories - numholes = 1. Within that constraint, we want to use
+    // the more complicated stories; longer text and more holes.
+    
     
     var completeStories = [];
     var incompleteStories = [];
     
     for (var i = 0; i < numtries; i++) {
+	if (i%100 == 0) {
+	    console.log("try "+i+" of "+numtries+".\t("+(completeStories.length+incompleteStories.length)+" stories so far.)");
+	}
         var s = ""
         try {
-            
+            var grammar = loadGrammar(name);
             s = grammar.flatten("#countlessOrigin#");
 
 	        s = s.split("%").join("#");
@@ -53,15 +63,17 @@ function loadGrammar(name) {
             // t is the story. Now what do we do with it?
         
             holes = (t.match(/STORYGOESHERE/g) || []).length;
-        
-            switch (holes) {
-                case 0:
+            if (t.split(' ').length >= minlength) {
+		switch (holes) {
+		case 0:
                     completeStories.push(t);
                     break;
-                default:
+		default:
                     incompleteStories.push(t);
                     break;
-                         }
+		}
+	    }
+            
         }
         catch (err) {}
         
@@ -84,6 +96,7 @@ function loadGrammar(name) {
     // Then set the last element aside as our main story. Discard the last element of the new list until the task is feasible.
     // Plug the last element into the first hole in our existing story. Discard the last element... etc.
     var story = "STORYGOESHERE";
+    numUsed = 0;
 
     function CustomReplace(strData, strTextToReplace, strReplaceWith, replaceAt) {
 	//by Shadow Wizard on Stackoverflow
@@ -105,6 +118,8 @@ function loadGrammar(name) {
         if (nextStory) {
 	    i = Math.floor(storyHoles*Math.random());
             story = CustomReplace(story,"STORYGOESHERE", nextStory, i);
+	    numUsed = numUsed + 1;
+	    fs.writeFile("./pieces/"+Math.random(), nextStory, function(err) {if (err) return console.log(err)});
         }
     }
     while (completeStories.length > 0 && (story.match(/STORYGOESHERE/g) || []).length > 0) {
@@ -112,10 +127,12 @@ function loadGrammar(name) {
         nextStory = completeStories.pop()
 	i = Math.floor(storyHoles*Math.random());
 	story = CustomReplace(story,"STORYGOESHERE", nextStory, i);
+	numUsed = numUsed + 1;
+	fs.writeFile("./pieces/"+Math.random(), nextStory, function(err) {if (err) return console.log(err)});
     }
     
     story = story.split("~").join("\\par ");
-    console.log("Using "+(numgenerated - completeStories.length - incompleteStories.length)+" stories.");
+    console.log("Using "+numUsed+" stories.");
     if ((story.match(/STORYGOESHERE/g) || []).length > 0) {
         console.log("Story incomplete. "+(story.match(/STORYGOESHERE/g) || []).length+" holes remain. Length "+story.split(" ").length+" words. Placed in failure.txt.");
         fs.writeFile("failure.txt", story, function(err) {if (err) return console.log(err)});
@@ -129,4 +146,4 @@ function loadGrammar(name) {
     
 }
 
-loadGrammar("nested");
+makeStories("nested");
